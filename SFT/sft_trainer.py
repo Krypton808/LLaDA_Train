@@ -28,6 +28,29 @@ class dLLMTrainer(Trainer):
         loss = loss.sum() / (inputs["input_ids"].numel() - num_prompt_tokens)
         return loss if not return_outputs else (loss, outputs)
 
+class dLLMSFTDataset(torch.utils.data.Dataset):
+    """
+    Similar to AR datasets, except in inference, we keep the timsteps fixed
+    """
+
+    def __init__(self, data, tokenizer, max_length, eval=False):
+        super().__init__()
+        self.data = data
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        self.eval = eval
+        if self.eval:
+            self.t = torch.linspace(0, 1, len(self.data))
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        out = self.data[idx]
+        if self.eval:
+            out["t"] = self.t[idx]
+        return out
+
 def preprocess_dataset_safety_alignment(train_data_path, eval_data_path, tokenizer, max_length, test_split=0.2):
     preprocessed_data_train = []
     preprocessed_data_eval = []
